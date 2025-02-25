@@ -1,23 +1,25 @@
 import React from "react";
 import "../Componets/Todo.css";
 import { useState, useRef, useEffect } from "react";
+import { v4 as uuidv4 } from 'uuid';
 
 function Todo() {
   const [Tasks, setTasks] = useState([]);
   const [input, setInput] = useState("");
   const inputRef = useRef(null);
-  const [editIndex, setEditIndex] = useState(null);
+  const [editId, seteditId] = useState(null);
+  
 
   useEffect(() => {
     inputRef.current.focus();
-  }, [Tasks,editIndex]);
+  }, [Tasks,editId]);
 
   function handleAdd() {
     if (input.trim() == "") {
       alert("Tasks cannot be empty!");
       return;
     }
-    setTasks((prev) => ([...prev, {text:input,completed:false}]));
+    setTasks((prev) => ([...prev, {text:input,completed:false,uniqueId:uuidv4()}]));
     setInput("");
   }
   function handleDelete(index) {
@@ -29,17 +31,26 @@ function Todo() {
       setTasks(withoutDelete);
     }
   }
-  function handleEdit (index) {
-    setEditIndex(index);//here index storing the edit index;
-    setInput(Tasks[index]);//here showing the editing value in input field;
+  function handleEdit (uniqueId) {
+    seteditId(uniqueId);//here edit id is storing!
+    const tasktoEdit = Tasks.find((task)=>task.uniqueId===uniqueId);
+     if (tasktoEdit){
+     setInput(tasktoEdit.text);
+    }//here showing the editing value in input field;
     
   }
   function handleSave () {
-    const updatedTasks = [...Tasks];
-   updatedTasks[editIndex]=input;
+
+    const updatedTasks = Tasks.map((x)=>{
+      if (x.uniqueId === editId){
+        return {...x,text:input}
+      }
+      return x;
+    })
+    console.log(updatedTasks)
     setTasks(updatedTasks);
-    setInput("");
-    setEditIndex(null);
+    setInput("")
+    seteditId(null);
   }
   function handleUp (index) {
     if (index===0){
@@ -54,20 +65,33 @@ function Todo() {
 
   }
   function handleDown (index) {
-    // if (index==Tasks.length-1){
-    //   alert("down is not possible!")
-    //   return;
-    // }
+    if (index==Tasks.length-1){
+      alert("down is not possible!")
+      return;
+    }
     const DownTasks = [...Tasks];
     let temp = DownTasks[index];
     DownTasks[index]=DownTasks[index+1];
     DownTasks[index+1]=temp;
     setTasks(DownTasks);
   }
+  function sortTasks(Tasks) {
+    return Tasks.sort((a, b) => {
+      if (a.completed && !b.completed) {
+        return -1;
+      }
+      if (!a.completed && b.completed) {
+        return 1;
+      }
+      return 0;
+    });
+  }
   function handleCheck (index) {
    const updatedTasks = Tasks.map((task,i)=>
     i===index?{...task,completed:!task.completed}:task
-   );
+  )
+  sortTasks(updatedTasks)
+  
    setTasks(updatedTasks);
   }
   return (
@@ -77,24 +101,24 @@ function Todo() {
         <input
           name="task"
           type="text"
-          value={input}
+          value={input} //ivde text 
           ref={inputRef}
           placeholder="Enter New Task To Do"
           onChange={(event) => setInput(event.target.value)}
         />
-        <button onClick={editIndex !==null ?handleSave:handleAdd}>{editIndex !==null ?"Save":"Add"}</button>
+        <button onClick={editId !==null ?handleSave:handleAdd}>{editId !==null ?"Save":"Add"}</button>
       </div>
       <div>
         <ol>
           {Tasks.map((task, index) => (
-            <li key={index} style={{textDecoration:task.completed?"line-through":"none"}}>
+            <li key={task.uniqueId} style={{textDecoration:task.completed?"line-through":"none"}}>
               <input type="checkbox" checked={task.completed} onChange={()=>handleCheck(index)} />
               <div style={{ flex: 1, overflowWrap: "break-word" }}>{task.text}</div>
               <div className="li-buttons">
                 <button onClick={()=>handleUp(index)}>up</button>
-                <button onClick={()=>handleDown(index)}>down</button>
+                <button disabled= {task.completed} onClick={()=>handleDown(index)}>down</button>
                 <button onClick={() => handleDelete(index)}>delete</button>
-                <button onClick={()=>handleEdit(index)} disabled={editIndex!=null}>Edit</button>
+                <button onClick={()=>handleEdit(task.uniqueId)} disabled={editId!=null}>Edit</button>
               </div>
             </li>
           ))}
